@@ -15,3 +15,7 @@ venv/
 
 # Sessions
 .sessions/
+examples/data/**/
+!examples/data/
+!examples/data/*/
+!examples/data/**/.gitkeep
