@@ -22,6 +22,7 @@ class ModelConfig(BaseModel):
     model_id: str = "us.anthropic.claude-sonnet-4-6"
     max_tokens: int = 4096
     temperature: float | None = None
+    extras: dict[str, Any] = {}
 
 
 class ServerConfig(BaseModel):

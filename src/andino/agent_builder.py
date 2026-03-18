@@ -31,6 +31,7 @@ def build_agent(config: AgentConfig, session_id: str | None = None) -> Agent:
         config.model.provider,
         config.model.model_id,
         max_tokens=config.model.max_tokens,
+        extras=config.model.extras or None,
     )
 
     tools = _build_tools(config)

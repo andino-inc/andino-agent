@@ -76,6 +76,24 @@ Human-readable description. Shown in `/info`.
 | `model_id` | string | `"us.anthropic.claude-sonnet-4-6"` | Model identifier for the provider |
 | `max_tokens` | int | `4096` | Max output tokens per invocation |
 | `temperature` | float \| null | `null` | Sampling temperature (provider default if null) |
+| `extras` | dict | `{}` | Additional keyword arguments passed to the model constructor (provider-specific) |
+
+**Model extras example** — enable extended thinking on Bedrock:
+
+```yaml
+model:
+  provider: bedrock
+  model_id: us.anthropic.claude-sonnet-4-6
+  extras:
+    additional_request_fields:
+      thinking:
+        type: enabled
+        budget_tokens: 10000
+```
+
+Any key in `extras` is forwarded as-is to the Strands model constructor (`BedrockModel`, `AnthropicModel`, or `OpenAIModel`). See each provider's documentation for supported parameters.
+
+> **Note:** Models that emit `<thinking>` tags as plain text (e.g. Amazon Nova without native thinking) are automatically cleaned — the tags are stripped before the response reaches the user.
 
 ### `system_prompt`
 

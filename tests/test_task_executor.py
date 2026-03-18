@@ -12,6 +12,7 @@ from andino.task_executor import (
     TaskState,
     TaskStatus,
     _extract_text,
+    _strip_thinking,
 )
 
 
@@ -47,6 +48,37 @@ class TestTaskStatus:
         assert data["result"] == "done"
 
 
+class TestStripThinking:
+    def test_removes_thinking_block(self):
+        text = "Hello<thinking>internal reasoning</thinking> World"
+        assert _strip_thinking(text) == "Hello World"
+
+    def test_no_thinking_tags(self):
+        text = "Just normal text"
+        assert _strip_thinking(text) == "Just normal text"
+
+    def test_multiline_thinking(self):
+        text = (
+            "Respuesta:\n"
+            "<thinking>\nEl usuario preguntó algo.\n"
+            "Debo responder.\n</thinking>\n"
+            "Aquí está la respuesta."
+        )
+        assert _strip_thinking(text) == "Respuesta:\n\nAquí está la respuesta."
+
+    def test_multiple_thinking_blocks(self):
+        text = "<thinking>first</thinking>A<thinking>second</thinking>B"
+        assert _strip_thinking(text) == "AB"
+
+    def test_empty_after_strip(self):
+        text = "<thinking>only thinking</thinking>"
+        assert _strip_thinking(text) == ""
+
+    def test_preserves_other_xml_tags(self):
+        text = "Use <code>print()</code> for output"
+        assert _strip_thinking(text) == "Use <code>print()</code> for output"
+
+
 class TestExtractText:
     def test_dict_message_with_content(self):
         result = MagicMock()
@@ -70,6 +102,15 @@ class TestExtractText:
         result = MagicMock()
         result.message = {"content": [{"image": "data"}, {"text": "only this"}]}
         assert _extract_text(result) == "only this"
+
+    def test_strips_thinking_from_content(self):
+        result = MagicMock()
+        result.message = {
+            "content": [
+                {"text": "<thinking>reasoning here</thinking>The answer is 42."},
+            ]
+        }
+        assert _extract_text(result) == "The answer is 42."
 
 
 class TestAgentPool:

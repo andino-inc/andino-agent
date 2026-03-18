@@ -12,21 +12,21 @@ class TestBuildModel:
     def test_bedrock_provider(self, mock_build):
         mock_build.return_value = MagicMock()
         result = build_model("bedrock", "model-id", max_tokens=2048)
-        mock_build.assert_called_once_with("model-id", 2048)
+        mock_build.assert_called_once_with("model-id", 2048, {})
         assert result is mock_build.return_value
 
     @patch("andino.model_registry._build_anthropic")
     def test_anthropic_provider(self, mock_build):
         mock_build.return_value = MagicMock()
         result = build_model("anthropic", "claude-3", max_tokens=1024)
-        mock_build.assert_called_once_with("claude-3", 1024)
+        mock_build.assert_called_once_with("claude-3", 1024, {})
         assert result is mock_build.return_value
 
     @patch("andino.model_registry._build_openai")
     def test_openai_provider(self, mock_build):
         mock_build.return_value = MagicMock()
         result = build_model("openai", "gpt-4", max_tokens=4096)
-        mock_build.assert_called_once_with("gpt-4")
+        mock_build.assert_called_once_with("gpt-4", {})
         assert result is mock_build.return_value
 
     def test_invalid_provider(self):
@@ -45,7 +45,7 @@ class TestBuildModel:
         mock_cls.return_value = MagicMock()
         from andino.model_registry import _build_bedrock
 
-        _build_bedrock("model-id", 4096)
+        _build_bedrock("model-id", 4096, {})
         mock_cls.assert_called_once_with(model_id="model-id", max_tokens=4096, region_name="us-west-2")
 
     @patch("strands.models.BedrockModel")
@@ -55,5 +55,27 @@ class TestBuildModel:
         mock_cls.return_value = MagicMock()
         from andino.model_registry import _build_bedrock
 
-        _build_bedrock("model-id", 4096)
+        _build_bedrock("model-id", 4096, {})
         mock_cls.assert_called_once_with(model_id="model-id", max_tokens=4096)
+
+    @patch("strands.models.BedrockModel")
+    def test_bedrock_with_extras(self, mock_cls, monkeypatch):
+        monkeypatch.delenv("AWS_REGION", raising=False)
+        monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+        mock_cls.return_value = MagicMock()
+        from andino.model_registry import _build_bedrock
+
+        extras = {"additional_request_fields": {"thinking": {"type": "enabled", "budget_tokens": 5000}}}
+        _build_bedrock("model-id", 4096, extras)
+        mock_cls.assert_called_once_with(
+            model_id="model-id",
+            max_tokens=4096,
+            additional_request_fields={"thinking": {"type": "enabled", "budget_tokens": 5000}},
+        )
+
+    @patch("andino.model_registry._build_bedrock")
+    def test_extras_forwarded(self, mock_build):
+        mock_build.return_value = MagicMock()
+        extras = {"additional_request_fields": {"thinking": {"type": "enabled"}}}
+        build_model("bedrock", "model-id", extras=extras)
+        mock_build.assert_called_once_with("model-id", 4096, extras)

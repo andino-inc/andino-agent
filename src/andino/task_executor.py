@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections import OrderedDict
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -93,6 +94,22 @@ class AgentPool:
         return agent, lock
 
 
+_THINKING_RE = re.compile(r"<thinking>.*?</thinking>", re.DOTALL)
+
+
+def _strip_thinking(text: str) -> str:
+    """Remove ``<thinking>...</thinking>`` blocks from model output.
+
+    Some models (e.g. Amazon Nova) embed reasoning in plain-text
+    ``<thinking>`` tags instead of using the native reasoning content
+    block type.  This helper strips those tags so they don't leak into
+    the user-facing response.
+    """
+    cleaned = _THINKING_RE.sub("", text)
+    # Collapse any leftover leading/trailing whitespace
+    return cleaned.strip()
+
+
 def _extract_text(result: object) -> str:
     """Extract text output from an AgentResult."""
     if hasattr(result, "message"):
@@ -100,9 +117,9 @@ def _extract_text(result: object) -> str:
         if isinstance(msg, dict):
             content = msg.get("content", [])
             texts = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("text")]
-            return "\n".join(texts)
-        return str(msg)
-    return str(result)
+            return _strip_thinking("\n".join(texts))
+        return _strip_thinking(str(msg))
+    return _strip_thinking(str(result))
 
 
 class TaskExecutor:
