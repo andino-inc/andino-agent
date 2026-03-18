@@ -68,6 +68,7 @@ class AgentConfig(BaseModel):
     server: ServerConfig = ServerConfig()
     limits: LimitsConfig = LimitsConfig()
     conversation: ConversationConfig = ConversationConfig()
+    skills: list[str] = []
     workspace: WorkspaceConfig = WorkspaceConfig()
     session: SessionConfig = SessionConfig()
 
@@ -103,6 +104,12 @@ class AgentConfig(BaseModel):
         # Resolve relative data paths against ANDINO_HOME
         config.session.storage_dir = str(resolve_data_path(config.session.storage_dir))
         config.workspace.base_dir = str(resolve_data_path(config.workspace.base_dir))
+
+        # Resolve skill paths relative to the YAML file directory
+        config.skills = [
+            str((yaml_path.parent / s).resolve()) if not Path(s).is_absolute() else s
+            for s in config.skills
+        ]
 
         return config
 

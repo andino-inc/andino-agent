@@ -85,12 +85,21 @@ def build_agent(config: AgentConfig, session_id: str | None = None) -> Agent:
         system_prompt = (system_prompt or "") + workspace_note
         logger.info("workspace_created session_id=%s dir=%s", session_id, workspace_dir)
 
+    # Build plugins (skills)
+    plugins: list = []
+    if config.skills:
+        from strands.vended_plugins.skills import AgentSkills
+
+        plugins.append(AgentSkills(skills=config.skills))
+        logger.info("skills_loaded paths=%s", config.skills)
+
     kwargs: dict = dict(
         model=model,
         tools=tools or None,
         system_prompt=system_prompt,
         conversation_manager=_build_conversation_manager(config.conversation),
         hooks=hooks or None,
+        plugins=plugins or None,
     )
 
     if session_id is not None:

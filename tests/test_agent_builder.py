@@ -102,3 +102,40 @@ class TestWorkspace:
         assert call_kwargs["system_prompt"] == "You are helpful."
         # Directory should NOT be created for stateless agents
         assert not (tmp_path / "workspaces").exists()
+
+
+class TestSkills:
+    @patch("andino.agent_builder.Agent")
+    @patch("andino.agent_builder.build_model")
+    def test_no_skills_no_plugins(self, mock_build_model, mock_agent_cls, sample_config):
+        mock_build_model.return_value = MagicMock()
+        mock_agent_cls.return_value = MagicMock()
+
+        sample_config.skills = []
+
+        build_agent(sample_config)
+
+        call_kwargs = mock_agent_cls.call_args[1]
+        assert call_kwargs.get("plugins") is None
+
+    @patch("strands.vended_plugins.skills.AgentSkills")
+    @patch("andino.agent_builder.Agent")
+    @patch("andino.agent_builder.build_model")
+    def test_skills_creates_plugin(self, mock_build_model, mock_agent_cls, mock_agent_skills, sample_config, tmp_path):
+        mock_build_model.return_value = MagicMock()
+        mock_agent_cls.return_value = MagicMock()
+        mock_agent_skills.return_value = MagicMock()
+
+        skill_dir = tmp_path / "skills" / "test-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: test-skill\ndescription: A test\n---\nInstructions here.\n"
+        )
+
+        sample_config.skills = [str(tmp_path / "skills")]
+
+        build_agent(sample_config)
+
+        call_kwargs = mock_agent_cls.call_args[1]
+        assert call_kwargs.get("plugins") is not None
+        assert len(call_kwargs["plugins"]) == 1

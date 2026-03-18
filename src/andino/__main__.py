@@ -36,6 +36,9 @@ tools:
 server:
   port: 8100
 
+skills:
+  - ./skills/
+
 limits:
   max_concurrent_tasks: 1
   task_timeout_seconds: 600
@@ -94,6 +97,20 @@ def _cmd_init(args: argparse.Namespace) -> None:
         _AGENT_YAML_TEMPLATE.format(name=args.name), encoding="utf-8"
     )
     (agent_dir / "system_prompt.md").write_text(_SYSTEM_PROMPT_TEMPLATE, encoding="utf-8")
+
+    # Scaffold example skill
+    example_skill_dir = agent_dir / "skills" / "example"
+    example_skill_dir.mkdir(parents=True)
+    (example_skill_dir / "SKILL.md").write_text(
+        "---\n"
+        "name: example\n"
+        'description: "An example skill — replace with your own"\n'
+        "---\n"
+        "# Example Skill\n\n"
+        "Replace this file with instructions for a real skill.\n"
+        "Skills teach the agent *how* to perform complex tasks step by step.\n",
+        encoding="utf-8",
+    )
 
     print(f"Created agent '{args.name}' at {agent_dir}")
     print(f"  Edit config:  {agent_dir / 'agent.yaml'}")

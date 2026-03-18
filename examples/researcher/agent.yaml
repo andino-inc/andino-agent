@@ -19,6 +19,9 @@ channels:
     app_token: ${SLACK_APP_TOKEN}
     bot_token: ${SLACK_BOT_TOKEN}
 
+skills:
+  - ./skills/
+
 server:
   host: "0.0.0.0"
   port: 8101
