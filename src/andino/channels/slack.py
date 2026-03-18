@@ -121,6 +121,19 @@ class SlackChannel(BaseChannel):
         @self._app.action(re.compile(r"^hitl_(approve|deny):"))
         async def handle_hitl_action(ack: Any, action: dict, say: Any, body: dict) -> None:
             await ack()
+
+            # Check approver whitelist
+            user_id = body.get("user", {}).get("id", "")
+            approvers = self._executor._config.hitl.approvers
+            if approvers and user_id not in approvers:
+                channel_id = body.get("channel", {}).get("id", "")
+                await self._app.client.chat_postEphemeral(
+                    channel=channel_id,
+                    user=user_id,
+                    text=":no_entry: You are not authorized to approve or deny tool executions.",
+                )
+                return
+
             action_id = action["action_id"]
             # Format: hitl_approve:task_id:interrupt_id
             parts = action_id.split(":", 2)
@@ -131,13 +144,47 @@ class SlackChannel(BaseChannel):
             responses = [
                 {"interruptResponse": {"interruptId": interrupt_id, "response": decision}}
             ]
-            self._executor.respond_to_interrupt(task_id, responses)
+            if not self._executor.respond_to_interrupt(task_id, responses):
+                logger.warning("hitl_already_resolved task_id=%s interrupt_id=%s", task_id, interrupt_id)
+                return
 
-            user = body.get("user", {}).get("username", "someone")
+            # Replace buttons with resolution status via chat_update
             msg_data = body.get("message", {})
-            thread_ts = msg_data.get("thread_ts") or msg_data.get("ts")
+            message_ts = msg_data.get("ts")
+            channel_id = body.get("channel", {}).get("id", "")
             emoji = ":white_check_mark:" if decision == "approved" else ":x:"
-            await say(text=f"{emoji} Tool *{decision}* by @{user}", thread_ts=thread_ts)
+
+            # Preserve original tool info section, replace actions with resolution
+            original_blocks = msg_data.get("blocks", [])
+            tool_section = original_blocks[0] if original_blocks else None
+            tool_text = (
+                tool_section.get("text", {}).get("text", "")
+                if isinstance(tool_section, dict)
+                else ""
+            )
+
+            updated_blocks = [
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": tool_text or ":gear: Tool approval"},
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"{emoji} *{decision.capitalize()}* by <@{user_id}>",
+                        }
+                    ],
+                },
+            ]
+
+            await self._app.client.chat_update(
+                channel=channel_id,
+                ts=message_ts,
+                blocks=updated_blocks,
+                text=f"Tool {decision} by <@{user_id}>",
+            )
 
     async def _handle_event(self, event: dict, say: Any) -> None:
         # Skip bot messages (avoid infinite loops)

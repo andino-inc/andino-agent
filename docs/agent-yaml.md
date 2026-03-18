@@ -178,11 +178,15 @@ hitl:
   require_approval:
     - strands_tools.shell:shell
     - strands_tools.file_write:file_write
+  approvers:
+    - U12345678
+    - U87654321
 ```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `require_approval` | list[string] | `[]` | Tool references that require human approval before execution |
+| `approvers` | list[string] | `[]` | User IDs authorized to approve/deny. Empty = anyone can approve |
 
 **How it works:**
 
@@ -191,6 +195,9 @@ hitl:
 3. The `interrupts` field in `TaskStatus` shows the pending approval with tool name and input
 4. A human responds via `POST /task/{task_id}/respond` (HTTP) or interactive buttons (Slack)
 5. If approved, execution continues. If denied, the tool is cancelled with a denial message
+6. On Slack, the approval buttons are replaced with a resolution status showing who approved/denied
+
+> **Finding Slack user IDs:** Open a user's profile → click the three dots menu → "Copy member ID".
 
 ### `limits`
 

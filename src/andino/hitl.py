@@ -14,6 +14,7 @@ class HitlConfig(BaseModel):
     """HITL configuration from agent.yaml."""
 
     require_approval: list[str] = []
+    approvers: list[str] = []
 
 
 class ToolApprovalHook:
