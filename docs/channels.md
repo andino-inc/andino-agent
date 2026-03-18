@@ -37,6 +37,12 @@ All conversations are scoped by thread. The bot always replies inside a thread.
 - Replies inside an existing thread use its `thread_ts`
 - Works identically for DMs, channels, and group messages
 
+### Processing indicator
+
+When the agent starts working on a message, an ⏳ reaction is added to the user's message. The reaction is automatically removed when the agent finishes (success or error). This provides immediate visual feedback that the bot received the message and is processing it.
+
+> **Note:** Requires `reactions:write` scope in the Slack App configuration.
+
 ### HITL in Slack
 
 When [HITL](hitl.md) is configured, tool approval requests are sent as interactive Slack messages with Approve/Deny buttons. After a user responds, the buttons are replaced with a resolution status showing who approved or denied. See [HITL Guide](hitl.md) for details.

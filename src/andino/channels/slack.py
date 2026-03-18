@@ -210,12 +210,29 @@ class SlackChannel(BaseChannel):
         async def on_interrupt(task_status: TaskStatus) -> None:
             await self._post_approval_buttons(say, thread_ts, task_status)
 
+        # Add processing indicator (⏳ reaction on the user's message)
+        event_ts = event.get("ts", "")
+        try:
+            await self._app.client.reactions_add(
+                channel=channel_id, timestamp=event_ts, name="hourglass_flowing_sand",
+            )
+        except Exception:
+            pass  # Don't fail if reaction fails (permissions, rate limits, etc.)
+
         try:
             status = await self.submit_and_wait(prompt, session_id, on_interrupt=on_interrupt)
             response_text = status.result or status.error or "No response"
         except Exception:
             logger.exception("slack_task_failed session_id=%s", session_id)
             response_text = "An error occurred while processing your request."
+        finally:
+            # Remove processing indicator
+            try:
+                await self._app.client.reactions_remove(
+                    channel=channel_id, timestamp=event_ts, name="hourglass_flowing_sand",
+                )
+            except Exception:
+                pass
 
         response_text = self._format(response_text)
 
