@@ -6,6 +6,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -35,6 +36,7 @@ class TaskStatus(BaseModel):
     result: str | None = None
     error: str | None = None
     interrupts: list[dict[str, Any]] | None = None
+    workspace_dir: str | None = None
     created_at: str | None = None
     started_at: str | None = None
     completed_at: str | None = None
@@ -180,6 +182,11 @@ class TaskExecutor:
 
             task_status.status = TaskState.running
             task_status.started_at = datetime.now(timezone.utc).isoformat()
+
+            # Populate workspace_dir if workspace is enabled for this session
+            if self._config.workspace.enabled and item.session_id:
+                workspace = Path(self._config.workspace.base_dir).resolve() / item.session_id
+                task_status.workspace_dir = str(workspace)
 
             agent, lock = await self._pool.acquire(item.session_id)
             try:

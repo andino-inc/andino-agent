@@ -31,6 +31,14 @@ class TestTaskStatus:
         assert ts.result is None
         assert ts.error is None
 
+    def test_workspace_dir_default_none(self):
+        ts = TaskStatus(task_id="t1", status=TaskState.queued)
+        assert ts.workspace_dir is None
+
+    def test_workspace_dir_populated(self):
+        ts = TaskStatus(task_id="t1", status=TaskState.queued, workspace_dir="/data/workspaces/s1")
+        assert ts.workspace_dir == "/data/workspaces/s1"
+
     def test_serialization(self):
         ts = TaskStatus(task_id="t1", status=TaskState.completed, result="done")
         data = ts.model_dump()
@@ -226,6 +234,60 @@ class TestTaskExecutor:
 
         status = executor.get_status("t1")
         assert status.status == TaskState.timeout
+
+    @patch("andino.task_executor.build_agent")
+    async def test_workspace_dir_set_when_enabled(self, mock_build, sample_config):
+        sample_config.workspace.enabled = True
+        sample_config.workspace.base_dir = "/tmp/test_workspaces"
+
+        mock_agent = MagicMock()
+        mock_result = MagicMock()
+        mock_result.message = {"content": [{"text": "Done"}]}
+        mock_agent.invoke_async = AsyncMock(return_value=mock_result)
+        mock_build.return_value = mock_agent
+
+        executor = TaskExecutor(sample_config)
+        await executor.submit("t1", "Hello", session_id="session-abc")
+
+        await asyncio.sleep(0.2)
+
+        status = executor.get_status("t1")
+        assert status.workspace_dir is not None
+        assert "session-abc" in status.workspace_dir
+
+    @patch("andino.task_executor.build_agent")
+    async def test_workspace_dir_none_when_disabled(self, mock_build, sample_config):
+        mock_agent = MagicMock()
+        mock_result = MagicMock()
+        mock_result.message = {"content": [{"text": "Done"}]}
+        mock_agent.invoke_async = AsyncMock(return_value=mock_result)
+        mock_build.return_value = mock_agent
+
+        executor = TaskExecutor(sample_config)
+        await executor.submit("t1", "Hello", session_id="session-abc")
+
+        await asyncio.sleep(0.2)
+
+        status = executor.get_status("t1")
+        assert status.workspace_dir is None
+
+    @patch("andino.task_executor.build_agent")
+    async def test_workspace_dir_none_without_session(self, mock_build, sample_config):
+        sample_config.workspace.enabled = True
+
+        mock_agent = MagicMock()
+        mock_result = MagicMock()
+        mock_result.message = {"content": [{"text": "Done"}]}
+        mock_agent.invoke_async = AsyncMock(return_value=mock_result)
+        mock_build.return_value = mock_agent
+
+        executor = TaskExecutor(sample_config)
+        await executor.submit("t1", "Hello")
+
+        await asyncio.sleep(0.2)
+
+        status = executor.get_status("t1")
+        assert status.workspace_dir is None
 
     @patch("andino.task_executor.build_agent")
     async def test_trim_history(self, mock_build, sample_config):

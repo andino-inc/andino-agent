@@ -34,6 +34,11 @@ class LimitsConfig(BaseModel):
     task_timeout_seconds: int = 600
 
 
+class WorkspaceConfig(BaseModel):
+    enabled: bool = False
+    base_dir: str = ".workspaces"
+
+
 class SessionConfig(BaseModel):
     storage_dir: str = ".sessions"
     max_pool_size: int = 20
@@ -51,6 +56,7 @@ class AgentConfig(BaseModel):
     hitl: HitlConfig = HitlConfig()
     server: ServerConfig = ServerConfig()
     limits: LimitsConfig = LimitsConfig()
+    workspace: WorkspaceConfig = WorkspaceConfig()
     session: SessionConfig = SessionConfig()
 
     @classmethod

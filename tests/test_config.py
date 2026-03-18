@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from andino.config import AgentConfig, LimitsConfig, ModelConfig, ServerConfig, SessionConfig
+from andino.config import AgentConfig, LimitsConfig, ModelConfig, ServerConfig, SessionConfig, WorkspaceConfig
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -46,6 +46,18 @@ class TestSessionConfig:
         cfg = SessionConfig()
         assert cfg.storage_dir == ".sessions"
         assert cfg.max_pool_size == 20
+
+
+class TestWorkspaceConfig:
+    def test_defaults(self):
+        cfg = WorkspaceConfig()
+        assert cfg.enabled is False
+        assert cfg.base_dir == ".workspaces"
+
+    def test_custom_values(self):
+        cfg = WorkspaceConfig(enabled=True, base_dir="/data/workspaces")
+        assert cfg.enabled is True
+        assert cfg.base_dir == "/data/workspaces"
 
 
 class TestAgentConfig:

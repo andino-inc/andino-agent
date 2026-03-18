@@ -40,6 +40,10 @@ limits:
   max_concurrent_tasks: 1
   task_timeout_seconds: 1200
 
+workspace:
+  enabled: true
+  base_dir: /data/workspaces
+
 session:
   storage_dir: /data/sessions
   max_pool_size: 20
@@ -177,6 +181,33 @@ All conversations are scoped by thread. The bot always replies inside a thread.
 - New messages use their own `ts` as thread root
 - Replies inside an existing thread use its `thread_ts`
 - Works identically for DMs, channels, and group messages
+
+### `workspace`
+
+Provides an isolated working directory per session where the agent creates artifacts, downloads files, and executes scripts.
+
+```yaml
+workspace:
+  enabled: true
+  base_dir: /data/.workspaces
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `false` | Enable workspace-per-session isolation |
+| `base_dir` | string | `".workspaces"` | Base directory for workspaces. Each session gets `{base_dir}/{session_id}/` |
+
+**How it works:**
+
+When enabled and a `session_id` is provided, Andino:
+1. Creates a directory at `{base_dir}/{session_id}/` if it doesn't exist
+2. Appends a workspace note to the system prompt so the LLM knows the path
+3. The LLM passes absolute paths within the workspace to tools (`shell` → `work_dir`, `file_write` → `path`, etc.)
+4. `TaskStatus` responses include a `workspace_dir` field pointing to the session's workspace
+
+**Separation from sessions:**
+- `.sessions/` = conversation state (managed by Strands `FileSessionManager`)
+- `.workspaces/` = agent artifacts (files, downloads, scripts created during tasks)
 
 ### `session`
 

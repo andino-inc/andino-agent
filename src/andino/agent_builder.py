@@ -41,10 +41,27 @@ def build_agent(config: AgentConfig, session_id: str | None = None) -> Agent:
 
         hooks.append(ToolApprovalHook(config.hitl.require_approval))
 
+    # Build system_prompt — optionally enriched with workspace path
+    system_prompt = config.system_prompt or None
+    workspace_dir: Path | None = None
+
+    if config.workspace.enabled and session_id:
+        workspace_dir = Path(config.workspace.base_dir).resolve() / session_id
+        workspace_dir.mkdir(parents=True, exist_ok=True)
+        workspace_note = (
+            "\n\n## Workspace\n"
+            f"Your workspace directory is: {workspace_dir}\n"
+            "Use this directory for all file operations, downloads, and artifacts.\n"
+            "When using the shell tool, set work_dir to this path.\n"
+            "When writing files, use absolute paths within this directory."
+        )
+        system_prompt = (system_prompt or "") + workspace_note
+        logger.info("workspace_created session_id=%s dir=%s", session_id, workspace_dir)
+
     kwargs: dict = dict(
         model=model,
         tools=tools or None,
-        system_prompt=config.system_prompt or None,
+        system_prompt=system_prompt,
         conversation_manager=SlidingWindowConversationManager(),
         hooks=hooks or None,
     )
