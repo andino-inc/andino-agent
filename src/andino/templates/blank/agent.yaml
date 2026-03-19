@@ -1,0 +1,23 @@
+name: blank
+version: "1.0.0"
+description: ""
+
+model:
+  provider: bedrock
+  model_id: us.anthropic.claude-sonnet-4-6
+  max_tokens: 4096
+
+system_prompt: ./system_prompt.md
+
+tools:
+  - strands_tools.http_request:http_request
+
+server:
+  port: 8100
+
+skills:
+  - ./skills/
+
+limits:
+  max_concurrent_tasks: 1
+  task_timeout_seconds: 600

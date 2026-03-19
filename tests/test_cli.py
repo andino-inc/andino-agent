@@ -71,11 +71,37 @@ class TestTyperCommands:
         assert (tmp_path / "agents" / "my-agent" / "system_prompt.md").is_file()
         assert (tmp_path / "agents" / "my-agent" / "skills" / "example" / "SKILL.md").is_file()
 
+    def test_init_with_template(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ANDINO_HOME", str(tmp_path))
+        result = runner.invoke(app, ["init", "my-sre", "--template", "sre"])
+        assert result.exit_code == 0
+        assert "my-sre" in result.output
+        assert "sre" in result.output
+        agent_dir = tmp_path / "agents" / "my-sre"
+        assert (agent_dir / "agent.yaml").is_file()
+        assert (agent_dir / "system_prompt.md").is_file()
+        # Verify agent name was updated in agent.yaml
+        content = (agent_dir / "agent.yaml").read_text()
+        assert "name: my-sre" in content
+
+    def test_init_invalid_template(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ANDINO_HOME", str(tmp_path))
+        result = runner.invoke(app, ["init", "bad", "--template", "nonexistent"])
+        assert result.exit_code == 1
+        assert "not found" in result.output
+
     def test_init_rejects_existing(self, tmp_path, monkeypatch):
         monkeypatch.setenv("ANDINO_HOME", str(tmp_path))
         (tmp_path / "agents" / "dup").mkdir(parents=True)
         result = runner.invoke(app, ["init", "dup"])
         assert result.exit_code == 1
+
+    def test_templates_lists_available(self):
+        result = runner.invoke(app, ["templates"])
+        assert result.exit_code == 0
+        assert "blank" in result.output
+        assert "sre" in result.output
+        assert "prospector" in result.output
 
     def test_run_missing_config(self, tmp_path, monkeypatch):
         monkeypatch.setenv("ANDINO_HOME", str(tmp_path))

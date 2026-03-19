@@ -15,9 +15,11 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import sys
 import time
 from importlib.metadata import version as pkg_version
+from importlib.resources import files as pkg_files
 from pathlib import Path
 
 import typer
@@ -35,39 +37,24 @@ app = typer.Typer(
 )
 console = Console()
 
-# ── Templates ──────────────────────────────────────────────────────────────
-
-_AGENT_YAML_TEMPLATE = """\
-name: {name}
-version: "1.0.0"
-description: ""
-
-model:
-  provider: bedrock
-  model_id: us.anthropic.claude-sonnet-4-6
-  max_tokens: 4096
-
-system_prompt: ./system_prompt.md
-
-tools:
-  - strands_tools.http_request:http_request
-
-server:
-  port: 8100
-
-skills:
-  - ./skills/
-
-limits:
-  max_concurrent_tasks: 1
-  task_timeout_seconds: 600
-"""
-
-_SYSTEM_PROMPT_TEMPLATE = """\
-You are a helpful AI assistant.
-"""
-
 # ── Helpers ────────────────────────────────────────────────────────────────
+
+
+def _get_templates_dir() -> Path:
+    """Return the path to bundled agent templates."""
+    return Path(str(pkg_files("andino") / "templates"))
+
+
+def _get_template_dir(name: str) -> Path:
+    """Return the path to a specific template, or exit with error."""
+    templates_root = _get_templates_dir()
+    template_dir = templates_root / name
+    if not template_dir.is_dir():
+        available = sorted(d.name for d in templates_root.iterdir() if d.is_dir() and d.name != "__pycache__")
+        console.print(f"[red]Error:[/] template [bold]{name}[/] not found")
+        console.print(f"Available: {', '.join(available)}")
+        raise typer.Exit(1)
+    return template_dir
 
 
 def _get_version() -> str:
@@ -135,37 +122,70 @@ def run(
 
 
 @app.command()
-def init(name: str = typer.Argument(help="Agent name")) -> None:
-    """Scaffold a new agent in ~/.andino/agents/<name>/."""
+def init(
+    name: str = typer.Argument(help="Agent name"),
+    template: str = typer.Option("blank", "--template", "-t", help="Template to scaffold from (see: andino templates)"),
+) -> None:
+    """Scaffold a new agent from a template in ~/.andino/agents/<name>/."""
     agent_dir = resolve_agent_dir(name)
     if agent_dir.exists():
         console.print(f"[red]Error:[/] agent directory already exists: {agent_dir}")
         raise typer.Exit(1)
 
-    agent_dir.mkdir(parents=True)
-    (agent_dir / "agent.yaml").write_text(
-        _AGENT_YAML_TEMPLATE.format(name=name), encoding="utf-8"
-    )
-    (agent_dir / "system_prompt.md").write_text(_SYSTEM_PROMPT_TEMPLATE, encoding="utf-8")
+    template_dir = _get_template_dir(template)
+    shutil.copytree(template_dir, agent_dir)
 
-    example_skill_dir = agent_dir / "skills" / "example"
-    example_skill_dir.mkdir(parents=True)
-    (example_skill_dir / "SKILL.md").write_text(
-        "---\n"
-        "name: example\n"
-        'description: "An example skill — replace with your own"\n'
-        "---\n"
-        "# Example Skill\n\n"
-        "Replace this file with instructions for a real skill.\n"
-        "Skills teach the agent *how* to perform complex tasks step by step.\n",
-        encoding="utf-8",
-    )
+    # Update agent name in agent.yaml
+    yaml_path = agent_dir / "agent.yaml"
+    if yaml_path.is_file():
+        content = yaml_path.read_text(encoding="utf-8")
+        # Replace first occurrence of template name with agent name
+        content = content.replace(f"name: {template}", f"name: {name}", 1)
+        yaml_path.write_text(content, encoding="utf-8")
 
-    console.print(f"[green]✓[/] Created agent [bold]{name}[/] at {agent_dir}")
+    console.print(f"[green]✓[/] Created agent [bold]{name}[/] from template [cyan]{template}[/]")
+    console.print(f"  Directory:    [cyan]{agent_dir}[/]")
     console.print(f"  Edit config:  [cyan]{agent_dir / 'agent.yaml'}[/]")
-    console.print(f"  Edit prompt:  [cyan]{agent_dir / 'system_prompt.md'}[/]")
     console.print(f"  Add secrets:  [cyan]{agent_dir / '.env'}[/]")
     console.print(f"  Run:          [bold]andino run {name}[/]")
+
+
+@app.command()
+def templates() -> None:
+    """List available agent templates for andino init."""
+    import yaml
+
+    templates_root = _get_templates_dir()
+    items = sorted(d for d in templates_root.iterdir() if d.is_dir() and d.name != "__pycache__")
+
+    if not items:
+        console.print("No templates found.")
+        return
+
+    console.print("\n[bold]Available templates:[/]\n")
+    for d in items:
+        yaml_path = d / "agent.yaml"
+        description = ""
+        tools_count = 0
+        skills_count = 0
+        if yaml_path.is_file():
+            try:
+                data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+                description = data.get("description", "")
+                tools_count = len(data.get("tools", []))
+                skills_count = len(data.get("skills", []))
+            except Exception:
+                pass
+        meta = []
+        if tools_count:
+            meta.append(f"{tools_count} tools")
+        if skills_count:
+            meta.append(f"{skills_count} skills")
+        meta_str = f" [dim]({', '.join(meta)})[/]" if meta else ""
+        desc_str = f" — {description}" if description else ""
+        console.print(f"  [cyan]{d.name}[/]{desc_str}{meta_str}")
+
+    console.print("\nUsage: [bold]andino init <name> --template <template>[/]\n")
 
 
 @app.command(name="list")
@@ -441,7 +461,7 @@ def main() -> None:
     if (
         len(sys.argv) == 2
         and not sys.argv[1].startswith("-")
-        and sys.argv[1] not in ("run", "init", "list", "validate", "info", "task")
+        and sys.argv[1] not in ("run", "init", "list", "validate", "info", "task", "templates")
     ):
         sys.argv = [sys.argv[0], "run", sys.argv[1]]
 
