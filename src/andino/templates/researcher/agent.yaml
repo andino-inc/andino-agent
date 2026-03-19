@@ -1,31 +1,58 @@
 name: researcher
 version: "1.0.0"
-description: "Investigates topics, analyzes feasibility, produces technical briefs"
+description: "Technical researcher — investigates topics, analyzes codebases, compares alternatives, and produces structured briefs"
 
 model:
   provider: bedrock
   model_id: us.anthropic.claude-sonnet-4-6
-  max_tokens: 4096
+  max_tokens: 8192
 
 system_prompt: ./system_prompt.md
 
 tools:
+  # Research
   - strands_tools.http_request:http_request
   - strands_tools.file_read:file_read
+  - strands_tools.file_write:file_write
+  - strands_tools.shell:shell
+  # Collaboration
   - andino.tools.jira:jira_add_comment
+  - andino.tools.confluence:confluence_search
+  - andino.tools.confluence:confluence_get_page
+  - andino.tools.confluence:confluence_create_page
+
+skills:
+  - ./skills/research-topic
+  - ./skills/explore-codebase
+  - ./skills/compare-alternatives
+  - ./skills/write-brief
+  - ./skills/feasibility-analysis
 
 channels:
   slack:
+    enabled: true
+    mode: socket
     app_token: ${SLACK_APP_TOKEN}
     bot_token: ${SLACK_BOT_TOKEN}
-
-skills:
-  - ./skills/
+    require_mention: true
 
 server:
   host: "0.0.0.0"
-  port: 8101
+  port: 8105
+  api_key: ${ANDINO_API_KEY}
+
+hitl:
+  require_approval:
+    - shell
+
+workspace:
+  enabled: true
+  base_dir: .workspaces
 
 limits:
-  max_concurrent_tasks: 1
-  task_timeout_seconds: 600
+  max_concurrent_tasks: 2
+  task_timeout_seconds: 900
+
+session:
+  storage_dir: .sessions
+  max_pool_size: 30

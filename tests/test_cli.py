@@ -100,8 +100,13 @@ class TestTyperCommands:
         result = runner.invoke(app, ["templates"])
         assert result.exit_code == 0
         assert "blank" in result.output
-        assert "sre" in result.output
+        assert "researcher" in result.output
         assert "prospector" in result.output
+        assert "sre" in result.output
+        # Deleted templates should not appear
+        assert "architect" not in result.output
+        assert "coder" not in result.output
+        assert "reviewer" not in result.output
 
     def test_run_missing_config(self, tmp_path, monkeypatch):
         monkeypatch.setenv("ANDINO_HOME", str(tmp_path))
