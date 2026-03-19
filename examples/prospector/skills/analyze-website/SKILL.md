@@ -21,10 +21,10 @@ Deep analysis of a company's website to detect payment capabilities, technology 
    Only fetch pages that exist — do not waste requests on 404s.
 
 3. **Detect payment processor** by examining HTML and JavaScript sources:
-   - Look for script tags: `js.stripe.com`, `sdk.mercadopago.com`, `checkout.adyen.com`, `paypal.com/sdk`, `cdn.openpay.mx`, `conekta.js`
+   - Look for script tags: `js.stripe.com`, `sdk.mercadopago.com`, `checkout.adyen.com`, `paypal.com/sdk`, `cdn.openpay.mx`
    - Look for iframes pointing to payment providers
    - Look for form actions or API endpoints mentioning payment providers
-   - Look for logos or brand mentions of: MercadoPago, Stripe, Adyen, PayPal, Openpay, Clip, Yuno, DLocal, Conekta
+   - Look for logos or brand mentions of: MercadoPago, Stripe, Adyen, PayPal, Openpay, Clip, Yuno, DLocal
 
 4. **Identify technology stack:**
    - Shopify: look for `cdn.shopify.com`, `myshopify.com`

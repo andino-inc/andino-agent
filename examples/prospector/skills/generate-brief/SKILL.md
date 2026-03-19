@@ -20,16 +20,16 @@ All other data should already be available from previous analysis steps (org enr
 
 2. **Classify the industry tier** (A or B) based on the system prompt tier tables.
 
-3. **Identify Conekta opportunities** — suggest 2-4 specific product angles based on:
-   - Current payment setup (if using a competitor, highlight Conekta advantages)
+3. **Identify opportunities** — suggest 2-4 specific product angles based on:
+   - Current payment setup (if using a competitor, highlight your advantages)
    - Business model (subscription → recurring billing optimization, ecommerce → checkout conversion)
-   - Missing capabilities (no SPEI → Conekta offers it, no card payments → Conekta enables it)
+   - Missing capabilities (no local payment methods, limited card processing)
    - Pain points typical for the industry
 
 4. **Craft a messaging angle** personalized to:
    - The company's industry and business model
    - Their current payment infrastructure
-   - A relevant Conekta case study or value proposition
+   - A relevant case study or value proposition
 
 5. **Write the brief** using the template from the system prompt. Save it to the workspace using `file_write`:
    - Filename: `{company_domain}_research_brief.md` (e.g. `totalpass.com.mx_research_brief.md`)

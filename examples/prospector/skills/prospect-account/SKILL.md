@@ -28,6 +28,6 @@ Full prospecting workflow for a single company. Validates ICP, analyzes website,
 
 ## Important Notes
 
-- If the company is detected as already using Conekta as payment processor, flag it and stop — they are an existing merchant.
+- If the company is detected as already using your company's payment processor, flag it and stop — they are an existing merchant.
 - Always try to estimate monthly payment volume based on available signals.
 - Prioritize quality over speed — a thorough brief is more valuable than a fast incomplete one.
