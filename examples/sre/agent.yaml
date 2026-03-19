@@ -1,0 +1,65 @@
+name: sre
+version: "1.0.0"
+description: "SRE Agent — incident response, service diagnosis, and escalation"
+
+model:
+  provider: bedrock
+  model_id: us.anthropic.claude-sonnet-4-6
+  max_tokens: 8192
+
+system_prompt: ./system_prompt.md
+
+tools:
+  # Observability (Datadog)
+  - andino.tools.datadog:datadog_search_logs
+  - andino.tools.datadog:datadog_query_metrics
+  - andino.tools.datadog:datadog_list_monitors
+  - andino.tools.datadog:datadog_get_monitor
+  - andino.tools.datadog:datadog_search_traces
+  - andino.tools.datadog:datadog_list_events
+  # Incident management (Jira)
+  - andino.tools.jira:jira_create_issue
+  - andino.tools.jira:jira_search_issues
+  - andino.tools.jira:jira_get_issue
+  - andino.tools.jira:jira_add_comment
+  - andino.tools.jira:jira_transition_issue
+  - andino.tools.jira:jira_assign_issue
+  # General
+  - strands_tools.http_request:http_request
+  - strands_tools.file_write:file_write
+  - strands_tools.shell:shell
+
+skills:
+  - ./skills/investigate-incident
+  - ./skills/create-incident
+  - ./skills/diagnose-service
+  - ./skills/escalate
+
+channels:
+  slack:
+    enabled: true
+    mode: socket
+    app_token: ${SLACK_APP_TOKEN}
+    bot_token: ${SLACK_BOT_TOKEN}
+    require_mention: true
+
+server:
+  host: "0.0.0.0"
+  port: 8120
+  api_key: ${ANDINO_API_KEY}
+
+hitl:
+  require_approval:
+    - shell
+
+workspace:
+  enabled: true
+  base_dir: .workspaces
+
+limits:
+  max_concurrent_tasks: 5
+  task_timeout_seconds: 600
+
+session:
+  storage_dir: .sessions
+  max_pool_size: 50
