@@ -16,13 +16,59 @@ logger = logging.getLogger(__name__)
 
 _CODE_BLOCK_RE = re.compile(r"```.*?\n(.*?)```", re.DOTALL)
 _INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+_TABLE_RE = re.compile(
+    r"((?:^\|.+\|[ \t]*\n)+)",
+    re.MULTILINE,
+)
+
+
+def _table_to_code_block(match: re.Match) -> str:
+    """Convert a markdown table to a Slack code block with aligned columns.
+
+    Parses the table rows, removes the separator row (---|---),
+    and re-renders as a fixed-width code block so Slack shows
+    properly aligned columns.
+    """
+    raw = match.group(1)
+    rows: list[list[str]] = []
+    for line in raw.strip().splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        # Skip separator rows like |---|---|
+        if all(re.fullmatch(r":?-+:?", c) for c in cells):
+            continue
+        rows.append(cells)
+
+    if not rows:
+        return raw
+
+    # Calculate column widths
+    n_cols = max(len(r) for r in rows)
+    widths = [0] * n_cols
+    for row in rows:
+        for i, cell in enumerate(row):
+            if i < n_cols:
+                widths[i] = max(widths[i], len(cell))
+
+    # Render aligned rows
+    lines: list[str] = []
+    for idx, row in enumerate(rows):
+        padded = [
+            (row[i] if i < len(row) else "").ljust(widths[i])
+            for i in range(n_cols)
+        ]
+        lines.append("  ".join(padded).rstrip())
+        # Add separator after header
+        if idx == 0 and len(rows) > 1:
+            lines.append("  ".join("-" * w for w in widths))
+
+    return "```\n" + "\n".join(lines) + "\n```\n"
 
 
 def _md_to_mrkdwn(text: str) -> str:
     """Convert standard markdown to Slack mrkdwn format.
 
-    Preserves code blocks and inline code, then converts bold, italic,
-    strikethrough, headings, images, and links.
+    Handles: code blocks, inline code, tables, images, links,
+    bold, italic, strikethrough, and headings.
     """
     # Extract code blocks and inline code to protect them from conversion
     placeholders: list[str] = []
@@ -33,6 +79,9 @@ def _md_to_mrkdwn(text: str) -> str:
 
     text = _CODE_BLOCK_RE.sub(_protect, text)
     text = _INLINE_CODE_RE.sub(_protect, text)
+
+    # Tables: | col | col | → code block with aligned columns
+    text = _TABLE_RE.sub(_table_to_code_block, text)
 
     # Images: ![alt](url) → <url|alt>
     text = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", r"<\2|\1>", text)
