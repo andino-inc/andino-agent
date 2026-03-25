@@ -271,15 +271,6 @@ class SlackChannel(BaseChannel):
 
             register_upload_context(workspace_dir, self._app.client, channel_id, thread_ts)
 
-        # Add processing indicator (⏳ reaction on the user's message)
-        event_ts = event.get("ts", "")
-        try:
-            await self._app.client.reactions_add(
-                channel=channel_id, timestamp=event_ts, name="hourglass_flowing_sand",
-            )
-        except Exception:
-            pass  # Don't fail if reaction fails (permissions, rate limits, etc.)
-
         try:
             status = await self.submit_and_wait(prompt, session_id, on_interrupt=on_interrupt)
             response_text = status.result or status.error or "No response"
@@ -287,13 +278,6 @@ class SlackChannel(BaseChannel):
             logger.exception("slack_task_failed session_id=%s", session_id)
             response_text = "An error occurred while processing your request."
         finally:
-            # Remove processing indicator
-            try:
-                await self._app.client.reactions_remove(
-                    channel=channel_id, timestamp=event_ts, name="hourglass_flowing_sand",
-                )
-            except Exception:
-                pass
             # Clear upload context
             if workspace_dir:
                 from andino.channels.slack_upload import clear_upload_context
