@@ -19,3 +19,4 @@ examples/data/**/
 !examples/data/
 !examples/data/*/
 !examples/data/**/.gitkeep
+charts/andino/values-*.yaml
