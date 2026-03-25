@@ -15,6 +15,14 @@ from andino.task_executor import TaskExecutor
 logger = logging.getLogger(__name__)
 
 
+class _HealthCheckFilter(logging.Filter):
+    """Suppress noisy health check access logs from uvicorn."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return "/health" not in msg
+
+
 def configure_logging(level: str = "info", log_file: str | None = None) -> None:
     """Configure the root logger with console and optional file output."""
     handlers: list[logging.Handler] = [logging.StreamHandler()]
@@ -65,6 +73,9 @@ class AgentService:
         executor = TaskExecutor(self.config)
         app = create_app(self.config, executor=executor)
         channels = load_channels(self.config, executor)
+
+        # Suppress /health access logs (ALB probes every 10s)
+        logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
 
         uv_config = uvicorn.Config(
             app,
