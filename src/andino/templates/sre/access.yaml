@@ -1,0 +1,34 @@
+# Access control for the SRE agent
+# Remove or modify rules as needed for your team
+
+groups:
+  admins:
+    - slack_id: UXXXXXXXXXX
+      name: Lead SRE
+    - slack_id: UXXXXXXXXXX
+      name: SRE
+
+rules:
+  # Shell commands: only admins, requires approval
+  - tool: shell
+    allow: admins
+    require_approval: true
+    approvers: admins
+
+  # Jira write operations: only admins
+  - tool: jira_create_issue
+    allow: admins
+
+  - tool: jira_transition_issue
+    allow: admins
+
+  # Datadog and read operations: everyone
+  - tool: datadog_*
+    allow: all
+
+  - tool: confluence_*
+    allow: all
+
+  # Default: allow all
+  - tool: "*"
+    allow: all

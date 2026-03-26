@@ -7,7 +7,10 @@ model:
   model_id: us.anthropic.claude-sonnet-4-6
   max_tokens: 8192
 
+persona: ./persona.md
 system_prompt: ./system_prompt.md
+context: ./context.md
+access: ./access.yaml
 
 tools:
   # Observability (Datadog)
