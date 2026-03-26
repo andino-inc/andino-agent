@@ -41,9 +41,7 @@ server:
   port: 8105
   api_key: ${ANDINO_API_KEY}
 
-hitl:
-  require_approval:
-    - shell
+# access: ./access.yaml  # optional — see docs/hitl.md
 
 workspace:
   enabled: true

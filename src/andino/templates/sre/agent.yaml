@@ -55,9 +55,6 @@ server:
   port: 8120
   api_key: ${ANDINO_API_KEY}
 
-hitl:
-  require_approval: []
-
 conversation:
   manager: sliding_window
   window_size: 10

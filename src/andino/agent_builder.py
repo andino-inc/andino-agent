@@ -62,14 +62,28 @@ def build_agent(config: AgentConfig, session_id: str | None = None) -> Agent:
 
     tools = _build_tools(config)
 
+    # Build AccessEvaluator from access.yaml (if configured)
+    from andino.access import AccessEvaluator
+
+    access_evaluator: AccessEvaluator | None = None
+    if config.access:
+        access_evaluator = AccessEvaluator.from_yaml(config.access)
+
     hooks: list = []
-    if config.hitl.require_approval:
+    if access_evaluator and access_evaluator.tools_requiring_approval:
         from andino.hitl import ToolApprovalHook
 
-        hooks.append(ToolApprovalHook(config.hitl.require_approval))
+        hooks.append(ToolApprovalHook(evaluator=access_evaluator))
 
-    # Build system_prompt — optionally enriched with workspace path
-    system_prompt = config.system_prompt or None
+    # Build system_prompt — persona + system_prompt + context + workspace
+    parts: list[str] = []
+    if config.persona:
+        parts.append(config.persona)
+    if config.system_prompt:
+        parts.append(config.system_prompt)
+    if config.context:
+        parts.append(f"\n\n## Environment Context\n\n{config.context}")
+    system_prompt: str | None = "\n\n".join(parts) if parts else None
     workspace_dir: Path | None = None
 
     if config.workspace.enabled and session_id:

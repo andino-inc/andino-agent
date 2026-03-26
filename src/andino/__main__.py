@@ -315,8 +315,8 @@ def info(agent: str = typer.Argument(help="Agent name or path to agent.yaml")) -
     conc = f"{config.limits.max_concurrent_tasks} tasks, {config.limits.task_timeout_seconds}s timeout"
     table.add_row("Concurrency", conc)
     table.add_row("Session", f"{config.session.storage_dir} (pool: {config.session.max_pool_size})")
-    if config.hitl.require_approval:
-        table.add_row("HITL", ", ".join(config.hitl.require_approval))
+    if config.access:
+        table.add_row("Access", f"[green]{config.access}[/]")
     console.print(table)
 
     # Tools

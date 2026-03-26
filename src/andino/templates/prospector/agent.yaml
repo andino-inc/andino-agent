@@ -41,9 +41,6 @@ server:
   port: 8110
   api_key: ${ANDINO_API_KEY}
 
-hitl:
-  require_approval: []
-
 workspace:
   enabled: true
   base_dir: .workspaces

@@ -132,6 +132,12 @@ class SlackChannel(BaseChannel):
         self._handler: Any = None
         self._bot_user_id: str | None = None
 
+        # Build access evaluator from config (if access.yaml is configured)
+        from andino.access import AccessEvaluator
+
+        access_path = self._executor._config.access
+        self._access = AccessEvaluator.from_yaml(access_path) if access_path else AccessEvaluator()
+
     async def start(self) -> None:
         from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
         from slack_bolt.async_app import AsyncApp
@@ -171,23 +177,31 @@ class SlackChannel(BaseChannel):
         async def handle_hitl_action(ack: Any, action: dict, say: Any, body: dict) -> None:
             await ack()
 
-            # Check approver whitelist
+            action_id = action["action_id"]
+            # Format: hitl_approve:task_id:interrupt_id
+            parts = action_id.split(":", 2)
+
+            # Extract tool name from interrupt to check approval permissions
             user_id = body.get("user", {}).get("id", "")
-            approvers = self._executor._config.hitl.approvers
-            if approvers and user_id not in approvers:
+            task_id = parts[1]
+            task_status = self._executor.get_status(task_id)
+            tool_name = ""
+            if task_status and task_status.interrupts:
+                for intr in task_status.interrupts:
+                    reason = intr.get("reason", {})
+                    if isinstance(reason, dict):
+                        tool_name = reason.get("tool_name", "")
+                        break
+
+            if tool_name and not self._access.can_approve(user_id, tool_name):
                 channel_id = body.get("channel", {}).get("id", "")
                 await self._app.client.chat_postEphemeral(
                     channel=channel_id,
                     user=user_id,
-                    text=":no_entry: You are not authorized to approve or deny tool executions.",
+                    text=":no_entry: You are not authorized to approve or deny this tool.",
                 )
                 return
-
-            action_id = action["action_id"]
-            # Format: hitl_approve:task_id:interrupt_id
-            parts = action_id.split(":", 2)
             decision = "approved" if parts[0] == "hitl_approve" else "denied"
-            task_id = parts[1]
             interrupt_id = parts[2]
 
             responses = [

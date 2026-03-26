@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from andino.hitl import HitlConfig
+from unittest.mock import MagicMock
+
+from andino.hitl import ToolApprovalHook
 
 
-class TestHitlConfig:
-    def test_defaults(self):
-        config = HitlConfig()
-        assert config.require_approval == []
-        assert config.approvers == []
+class TestToolApprovalHook:
+    def test_with_plain_list(self):
+        hook = ToolApprovalHook(require_approval=["shell", "file_write"])
+        assert hook._needs_approval("shell") is True
+        assert hook._needs_approval("file_write") is True
+        assert hook._needs_approval("http_request") is False
 
-    def test_require_approval_parsed(self):
-        config = HitlConfig(require_approval=["strands_tools.shell:shell"])
-        assert config.require_approval == ["strands_tools.shell:shell"]
+    def test_with_evaluator(self):
+        evaluator = MagicMock()
+        evaluator.needs_approval.side_effect = lambda t: t == "shell"
+        hook = ToolApprovalHook(evaluator=evaluator)
+        assert hook._needs_approval("shell") is True
+        assert hook._needs_approval("http_request") is False
 
-    def test_approvers_parsed(self):
-        config = HitlConfig(approvers=["U12345678", "U87654321"])
-        assert config.approvers == ["U12345678", "U87654321"]
-
-    def test_approvers_empty_by_default(self):
-        config = HitlConfig(require_approval=["tool_a"])
-        assert config.approvers == []
+    def test_empty_config(self):
+        hook = ToolApprovalHook(require_approval=[])
+        assert hook._needs_approval("anything") is False

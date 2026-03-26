@@ -9,7 +9,6 @@ from typing import Any
 import yaml
 from pydantic import BaseModel
 
-from andino.hitl import HitlConfig
 from andino.home import resolve_data_path
 
 logger = logging.getLogger(__name__)
@@ -63,8 +62,10 @@ class AgentConfig(BaseModel):
     system_prompt: str = ""
     tools: list[str] = []
     mcp_servers: list[dict[str, Any]] = []
+    persona: str = ""
+    context: str = ""
+    access: str = ""
     channels: dict[str, dict[str, Any]] = {}
-    hitl: HitlConfig = HitlConfig()
     server: ServerConfig = ServerConfig()
     limits: LimitsConfig = LimitsConfig()
     conversation: ConversationConfig = ConversationConfig()
@@ -89,15 +90,22 @@ class AgentConfig(BaseModel):
         # Expand ${VAR} references from environment
         _expand_env_vars(raw)
 
-        # Resolve system_prompt file reference
-        sp = raw.get("system_prompt", "")
-        if isinstance(sp, str) and sp.endswith(".md"):
-            sp_path = yaml_path.parent / sp
-            if sp_path.is_file():
-                raw["system_prompt"] = sp_path.read_text(encoding="utf-8")
-                logger.info("loaded_system_prompt path=%s", sp_path)
-            else:
-                logger.warning("system_prompt file not found: %s", sp_path)
+        # Resolve .md file references (system_prompt, persona, context)
+        for field in ("system_prompt", "persona", "context"):
+            val = raw.get(field, "")
+            if isinstance(val, str) and val.endswith(".md"):
+                md_path = yaml_path.parent / val
+                if md_path.is_file():
+                    raw[field] = md_path.read_text(encoding="utf-8")
+                    logger.info("loaded_%s path=%s", field, md_path)
+                else:
+                    logger.warning("%s file not found: %s", field, md_path)
+
+        # Resolve access.yaml reference
+        access_val = raw.get("access", "")
+        if isinstance(access_val, str) and access_val.endswith((".yaml", ".yml")):
+            access_path = yaml_path.parent / access_val
+            raw["access"] = str(access_path.resolve())
 
         config = cls.model_validate(raw)
 
